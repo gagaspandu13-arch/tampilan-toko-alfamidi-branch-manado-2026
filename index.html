@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monitoring Foto Tampakan Toko - Direct Gallery</title>
+
+  <!-- Tailwind CSS Configuration (Pre-initialized to prevent ReferenceError) -->
+  <script>
+    window.tailwind = window.tailwind || {};
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              red: '#DC2626',
+              reddark: '#B91C1C',
+              dark: '#0F172A',
+              gray: '#F8FAFC'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          }
+        }
+      }
+    };
+  </script>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      background-color: #F1F5F9;
+      font-family: 'Inter', sans-serif;
+    }
+    .modal-blur {
+      backdrop-filter: blur(8px);
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+
+  <header class="bg-gradient-to-r from-red-700 via-brand-red to-red-800 text-white shadow-lg sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+      <div class="flex items-center gap-3.5">
+        <div class="bg-white text-brand-red p-2.5 rounded-2xl shadow-md flex items-center justify-center">
+          <i class="fa-solid fa-store text-2xl"></i>
+        </div>
+        <div>
+          <h1 class="text-lg sm:text-xl font-black tracking-tight uppercase leading-tight">MONITORING FOTO TAMPILAN TOKO</h1>
+          <p class="text-xs text-red-100 font-medium">Store Visual - Service Quality</p>
+        </div>
+      </div>
+      <button id="btnRefresh" onclick="loadDashboardData(true)" class="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl text-xs font-bold transition duration-200 border border-white/20 active:scale-95 shadow-sm cursor-pointer">
+        <i id="refreshIcon" class="fa-solid fa-rotate-right"></i>
+        <span>Refresh Data</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
+
+    <!-- ERROR DIAGNOSTIC BANNER -->
+    <div id="errorBanner" class="hidden bg-red-50 border-l-4 border-red-500 p-4 rounded-xl shadow-sm space-y-2">
+      <div class="flex items-center gap-2 text-red-700 font-bold">
+        <i class="fa-solid fa-circle-exclamation text-lg"></i>
+        <span>Gagal Memuat Data</span>
+      </div>
+      <p id="errorMessage" class="text-sm text-red-600 font-medium"></p>
+    </div>
+
+    <section class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-4 sm:p-5 space-y-4">
+      
+      <!-- Top Filters Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- Filter AM -->
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+            <i class="fa-solid fa-user-tie text-brand-red mr-1"></i>Area Manager (AM)
+          </label>
+          <div class="relative">
+            <select id="filterAM" onchange="onAMChange()" class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-xl focus:ring-2 focus:ring-brand-red focus:border-brand-red p-2.5 pr-8 appearance-none font-semibold cursor-pointer transition">
+              <option value="">Semua AM</option>
+            </select>
+            <i class="fa-solid fa-chevron-down absolute right-3 top-3.5 text-xs text-slate-400 pointer-events-none"></i>
+          </div>
+        </div>
+
+        <!-- Filter AC -->
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+            <i class="fa-solid fa-id-badge text-brand-red mr-1"></i>Area Chief (AC)
+          </label>
+          <div class="relative">
+            <select id="filterAC" onchange="applyFilters()" class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-xl focus:ring-2 focus:ring-brand-red focus:border-brand-red p-2.5 pr-8 appearance-none font-semibold cursor-pointer transition">
+              <option value="">Semua AC</option>
+            </select>
+            <i class="fa-solid fa-chevron-down absolute right-3 top-3.5 text-xs text-slate-400 pointer-events-none"></i>
+          </div>
+        </div>
+
+        <!-- Sorting -->
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+            <i class="fa-solid fa-arrow-down-a-z text-brand-red mr-1"></i>Urutkan Data
+          </label>
+          <div class="relative">
+            <select id="sortBy" onchange="applyFilters()" class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-xl focus:ring-2 focus:ring-brand-red focus:border-brand-red p-2.5 pr-8 appearance-none font-semibold cursor-pointer transition">
+              <option value="kode-asc">Kode Toko A-Z</option>
+              <option value="kode-desc">Kode Toko Z-A</option>
+              <option value="nama-asc">Nama Toko A-Z</option>
+              <option value="nama-desc">Nama Toko Z-A</option>
+            </select>
+            <i class="fa-solid fa-chevron-down absolute right-3 top-3.5 text-xs text-slate-400 pointer-events-none"></i>
+          </div>
+        </div>
+
+        <!-- Search Box -->
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+            <i class="fa-solid fa-magnifying-glass text-brand-red mr-1"></i>Cari Kode Toko
+          </label>
+          <div class="relative">
+            <input type="text" id="searchKode" oninput="applyFilters()" placeholder="Ketik Kode Toko..." class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-xl focus:ring-2 focus:ring-brand-red focus:border-brand-red p-2.5 pl-9 font-semibold transition placeholder:text-slate-400 placeholder:font-normal">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-3.5 text-slate-400 text-xs"></i>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="pt-3 border-t border-slate-100">
+        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+          <i class="fa-regular fa-images text-brand-red mr-1"></i>Menu Kategori Tampilan Foto
+        </label>
+        <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1" id="categoryTabs">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- SUMMARY ROW -->
+    <div class="flex justify-between items-center bg-white px-5 py-3 rounded-xl border border-slate-200/80 shadow-sm">
+      <div class="flex items-center gap-2 text-slate-600 font-bold text-xs sm:text-sm">
+        <i class="fa-solid fa-chart-pie text-brand-red"></i>
+        <span>HASIL MONITORING</span>
+      </div>
+      <div class="inline-flex items-center gap-2 bg-red-50 text-brand-red font-black px-3 py-1 rounded-lg border border-red-100 text-xs sm:text-sm">
+        <span>TOTAL:</span>
+        <span id="totalTokoBadge" class="text-sm sm:text-base">0 Toko</span>
+      </div>
+    </div>
+
+    <!-- LOADING STATE -->
+    <div id="loadingState" class="py-20 text-center space-y-4">
+      <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-brand-red border-t-transparent"></div>
+      <p class="text-slate-500 font-medium text-sm">Memuat gallery foto tampakan toko...</p>
+    </div>
+
+    <div id="storeGrid" class="space-y-6 hidden"></div>
+
+    <!-- EMPTY STATE -->
+    <div id="emptyState" class="hidden py-16 text-center bg-white rounded-2xl border border-dashed border-slate-300">
+      <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3">
+        <i class="fa-solid fa-store-slash text-2xl"></i>
+      </div>
+      <h3 class="text-base font-bold text-slate-700">Tidak Ada Data Toko Ditemukan</h3>
+      <p class="text-xs text-slate-500 mt-1">Coba sesuaikan filter AM, AC, atau kata kunci pencarian Anda.</p>
+    </div>
+
+  </main>
+
+  <div id="lightbox" class="fixed inset-0 z-50 hidden bg-black/95 modal-blur flex flex-col justify-between p-4 sm:p-6 select-none">
+    
+    <div class="flex justify-between items-center text-white z-10">
+      <div>
+        <h4 id="lightboxCategory" class="text-base sm:text-lg font-bold text-red-400 uppercase tracking-wide">TAMPAK DEPAN</h4>
+        <p id="lightboxStoreInfo" class="text-xs text-slate-300 font-semibold mt-0.5"></p>
+      </div>
+      <div class="flex items-center gap-3">
+        <a id="lightboxDriveBtn" href="#" target="_blank" class="bg-white/10 hover:bg-white/20 text-white text-xs px-3.5 py-2 rounded-lg font-medium border border-white/20 flex items-center gap-2 transition">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i>
+          <span class="hidden sm:inline">Buka File Drive</span>
+        </a>
+        <button onclick="closeLightbox()" class="text-slate-300 hover:text-white bg-white/10 hover:bg-white/20 w-9 h-9 rounded-full flex items-center justify-center transition cursor-pointer">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="relative flex-1 flex items-center justify-center my-4 overflow-hidden">
+      <button onclick="navigateLightbox(-1)" class="absolute left-2 sm:left-4 z-10 text-white bg-black/50 hover:bg-black/80 w-11 h-11 rounded-full flex items-center justify-center transition border border-white/10 cursor-pointer">
+        <i class="fa-solid fa-chevron-left text-lg"></i>
+      </button>
+
+      <img id="lightboxImg" src="" alt="Fullscreen View" class="max-h-full max-w-full object-contain rounded-lg shadow-2xl transition-transform duration-200">
+
+      <button onclick="navigateLightbox(1)" class="absolute right-2 sm:right-4 z-10 text-white bg-black/50 hover:bg-black/80 w-11 h-11 rounded-full flex items-center justify-center transition border border-white/10 cursor-pointer">
+        <i class="fa-solid fa-chevron-right text-lg"></i>
+      </button>
+    </div>
+
+    <div class="flex justify-between items-center text-slate-400 text-xs sm:text-sm z-10 max-w-md mx-auto w-full bg-slate-900/80 px-4 py-2 rounded-xl border border-slate-800">
+      <button onclick="zoomLightbox(-0.2)" class="hover:text-white px-2 py-1 cursor-pointer"><i class="fa-solid fa-magnifying-glass-minus text-base"></i> Zoom Out</button>
+      <button onclick="resetZoomLightbox()" class="hover:text-white px-2 py-1 cursor-pointer"><i class="fa-solid fa-compress text-base"></i> Reset</button>
+      <button onclick="zoomLightbox(0.2)" class="hover:text-white px-2 py-1 cursor-pointer"><i class="fa-solid fa-magnifying-glass-plus text-base"></i> Zoom In</button>
+    </div>
+
+  </div>
+
+  <script>
+    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycby7HVqknUZUjtWof0FAWQxzV8B326Cow6nPmECGZIaDbsvZqEWd2fTpHz6l-s8KW_PF/exec';
+
+    let rawStoresData = [];
+    let filteredStoresData = [];
+    let amAcRelations = {};
+    let selectedCategory = 'ALL';
+
+    let activeLightboxPhotos = [];
+    let activePhotoIndex = 0;
+    let currentZoom = 1;
+
+    const CATEGORY_KEYS = [
+      { key: 'tampakDepan', label: 'TAMPAK DEPAN' },
+      { key: 'tampakKiri', label: 'TAMPAK KIRI' },
+      { key: 'tampakKanan', label: 'TAMPAK KANAN' },
+      { key: 'freshFood', label: 'FRESH FOOD' },
+      { key: 'kondisiKasir', label: 'KONDISI KASIR' },
+      { key: 'areaSales', label: 'AREA SALES' }
+    ];
+
+    function renderCategoryTabs() {
+      const container = document.getElementById('categoryTabs');
+      if (!container) return;
+
+      const tabs = [
+        { key: 'ALL', label: 'Semua Tampilan' },
+        ...CATEGORY_KEYS
+      ];
+
+      container.innerHTML = tabs.map(tab => {
+        const isActive = selectedCategory === tab.key;
+        const activeClass = isActive 
+          ? 'bg-brand-red text-white font-bold shadow-sm' 
+          : 'bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium';
+        
+        return `
+          <button 
+            onclick="selectCategoryTab('${tab.key}')" 
+            class="px-3.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition cursor-pointer ${activeClass}">
+            ${escapeHtml(tab.label)}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function selectCategoryTab(key) {
+      selectedCategory = key;
+      renderCategoryTabs();
+      renderStoreGrid();
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      renderCategoryTabs();
+      loadDashboardData(false);
+    });
+
+    function loadDashboardData(isRefresh) {
+      const btnRefresh = document.getElementById('btnRefresh');
+      const refreshIcon = document.getElementById('refreshIcon');
+      const errorBanner = document.getElementById('errorBanner');
+      
+      errorBanner.classList.add('hidden');
+      refreshIcon.classList.add('fa-spin');
+      btnRefresh.disabled = true;
+
+      if (!isRefresh) {
+        document.getElementById('loadingState').classList.remove('hidden');
+        document.getElementById('storeGrid').classList.add('hidden');
+        document.getElementById('emptyState').classList.add('hidden');
+      }
+
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(onDataLoaded)
+          .withFailureHandler(onDataError)
+          .getDashboardData();
+      } else {
+        fetch(`${WEB_APP_URL}?action=getDashboardData`)
+          .then(response => {
+            if (!response.ok) throw new Error('HTTP Status Error: ' + response.status);
+            return response.json();
+          })
+          .then(data => onDataLoaded(data))
+          .catch(err => onDataError(err));
+      }
+    }
+
+    function onDataLoaded(response) {
+      document.getElementById('refreshIcon').classList.remove('fa-spin');
+      document.getElementById('btnRefresh').disabled = false;
+      document.getElementById('loadingState').classList.add('hidden');
+
+      if (!response || !response.success) {
+        showErrorBanner(response ? response.error : 'Terjadi kesalahan sistem.');
+        return;
+      }
+
+      rawStoresData = response.stores || [];
+      amAcRelations = response.amAcRelations || {};
+
+      populateDropdowns(response.amList || [], response.acList || []);
+      applyFilters();
+    }
+
+    function onDataError(err) {
+      document.getElementById('refreshIcon').classList.remove('fa-spin');
+      document.getElementById('btnRefresh').disabled = false;
+      document.getElementById('loadingState').classList.add('hidden');
+      showErrorBanner(err.toString ? err.toString() : 'Gagal terhubung ke Apps Script.');
+    }
+
+    function showErrorBanner(msg) {
+      const errorBanner = document.getElementById('errorBanner');
+      const errorMessage = document.getElementById('errorMessage');
+      errorMessage.textContent = msg;
+      errorBanner.classList.remove('hidden');
+    }
+
+    function populateDropdowns(amList, acList) {
+      const selectAM = document.getElementById('filterAM');
+      selectAM.innerHTML = '<option value="">Semua AM</option>';
+      amList.forEach(am => {
+        selectAM.innerHTML += `<option value="${escapeHtml(am)}">${escapeHtml(am)}</option>`;
+      });
+
+      populateACDropdown(acList);
+    }
+
+    function populateACDropdown(acList) {
+      const selectAC = document.getElementById('filterAC');
+      const currentVal = selectAC.value;
+      selectAC.innerHTML = '<option value="">Semua AC</option>';
+      
+      acList.forEach(ac => {
+        selectAC.innerHTML += `<option value="${escapeHtml(ac)}">${escapeHtml(ac)}</option>`;
+      });
+
+      if (acList.includes(currentVal)) {
+        selectAC.value = currentVal;
+      }
+    }
+
+    function onAMChange() {
+      const selectedAM = document.getElementById('filterAM').value;
+      
+      if (selectedAM && amAcRelations[selectedAM]) {
+        populateACDropdown(amAcRelations[selectedAM]);
+      } else {
+        const allACs = [...new Set(rawStoresData.map(s => s.ac).filter(Boolean))].sort();
+        populateACDropdown(allACs);
+      }
+      
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const filterAM = document.getElementById('filterAM').value;
+      const filterAC = document.getElementById('filterAC').value;
+      const searchKode = document.getElementById('searchKode').value.toLowerCase().trim();
+      const sortBy = document.getElementById('sortBy').value;
+
+      filteredStoresData = rawStoresData.filter(store => {
+        const matchesAM = !filterAM || store.am === filterAM;
+        const matchesAC = !filterAC || store.ac === filterAC;
+        const matchesKode = !searchKode || store.kodeToko.toLowerCase().includes(searchKode);
+        return matchesAM && matchesAC && matchesKode;
+      });
+
+      filteredStoresData.sort((a, b) => {
+        if (sortBy === 'kode-asc') return a.kodeToko.localeCompare(b.kodeToko);
+        if (sortBy === 'kode-desc') return b.kodeToko.localeCompare(a.kodeToko);
+        if (sortBy === 'nama-asc') return a.namaToko.localeCompare(b.namaToko);
+        if (sortBy === 'nama-desc') return b.namaToko.localeCompare(a.namaToko);
+        return 0;
+      });
+
+      renderStoreGrid();
+    }
+
+    function renderStoreGrid() {
+      const grid = document.getElementById('storeGrid');
+      const empty = document.getElementById('emptyState');
+      const badge = document.getElementById('totalTokoBadge');
+
+      badge.textContent = `${filteredStoresData.length} Toko`;
+
+      if (filteredStoresData.length === 0) {
+        grid.classList.add('hidden');
+        empty.classList.remove('hidden');
+        return;
+      }
+
+      empty.classList.add('hidden');
+      grid.classList.remove('hidden');
+
+      // Reset global photo tracking for lightbox navigation
+      activeLightboxPhotos = [];
+
+      grid.innerHTML = filteredStoresData.map((store, storeIdx) => {
+        let photosHtml = '';
+
+        if (selectedCategory === 'ALL') {
+          // Display 6 photos grid directly on the store card
+          photosHtml = `
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-4">
+              ${CATEGORY_KEYS.map(cat => {
+                const p = store.photos ? store.photos[cat.key] : null;
+                if (p && p.imageUrl) {
+                  const globalIdx = activeLightboxPhotos.length;
+                  activeLightboxPhotos.push({
+                    category: cat.label,
+                    storeInfo: `${store.kodeToko} - ${store.namaToko}`,
+                    imageUrl: p.imageUrl,
+                    url: p.url
+                  });
+
+                  return `
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden shadow-2xl flex flex-col group hover:border-brand-red transition">
+                      <div class="bg-slate-800 text-white text-[10px] font-bold px-2.5 py-1 truncate">
+                        ${cat.label}
+                      </div>
+                      <div class="relative aspect-square cursor-pointer bg-slate-200 overflow-hidden" onclick="openLightbox(${globalIdx})">
+                        <img src="${p.imageUrl}" alt="${cat.label}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" onerror="handleImgError(this)">
+                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition duration-200 flex items-center justify-center text-white text-xs font-bold gap-1">
+                          <i class="fa-solid fa-magnifying-glass-plus"></i>
+                          <span>Zoom</span>
+                        </div>
+                      </div>
+                    </div>
+                  `;
+                } else {
+                  return `
+                    <div class="bg-slate-50 border border-dashed border-slate-300 rounded-xl overflow-hidden flex flex-col">
+                      <div class="bg-slate-200 text-slate-600 text-[10px] font-bold px-2.5 py-1 truncate">
+                        ${cat.label}
+                      </div>
+                      <div class="aspect-square flex flex-col items-center justify-center text-slate-400 p-2 text-center">
+                        <i class="fa-regular fa-image text-xl mb-1 text-slate-300"></i>
+                        <span class="text-[10px] font-medium leading-tight">Foto Belum Tersedia</span>
+                      </div>
+                    </div>
+                  `;
+                }
+              }).join('')}
+            </div>
+          `;
+        } else {
+          // Display targeted view category photo enlarged directly
+          const catInfo = CATEGORY_KEYS.find(c => c.key === selectedCategory);
+          const p = store.photos ? store.photos[selectedCategory] : null;
+
+          if (p && p.imageUrl) {
+            const globalIdx = activeLightboxPhotos.length;
+            activeLightboxPhotos.push({
+              category: catInfo ? catInfo.label : 'FOTO TOKO',
+              storeInfo: `${store.kodeToko} - ${store.namaToko}`,
+              imageUrl: p.imageUrl,
+              url: p.url
+            });
+
+            photosHtml = `
+              <div class="mt-4 bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 shadow-md">
+                <div class="p-3 bg-slate-800 text-white flex justify-between items-center text-xs font-bold">
+                  <span class="text-red-400 uppercase"><i class="fa-solid fa-camera mr-1.5"></i>${catInfo ? catInfo.label : ''}</span>
+                  <a href="${p.url}" target="_blank" class="text-slate-300 hover:text-white text-[11px] font-medium underline flex items-center gap-1">
+                    <span>Buka Drive</span>
+                    <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+                  </a>
+                </div>
+                <div class="relative max-h-[420px] bg-black cursor-pointer group flex items-center justify-center" onclick="openLightbox(${globalIdx})">
+                  <img src="${p.imageUrl}" alt="${catInfo ? catInfo.label : ''}" class="max-h-[420px] w-full object-contain group-hover:scale-[1.01] transition duration-300">
+                  <div class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition duration-200 flex items-center justify-center text-white text-sm font-bold gap-2">
+                    <i class="fa-solid fa-magnifying-glass-plus text-lg"></i>
+                    <span>Klik Untuk Perbesar Foto</span>
+                  </div>
+                </div>
+              </div>
+            `;
+          } else {
+            photosHtml = `
+              <div class="mt-4 bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-8 text-center text-slate-400">
+                <i class="fa-solid fa-image text-3xl mb-2 text-slate-300"></i>
+                <p class="text-xs font-bold text-slate-500">Foto ${catInfo ? catInfo.label : ''} Belum Tersedia</p>
+                <p class="text-[11px] text-slate-400 mt-0.5">Toko belum mengunggah foto untuk kategori ini.</p>
+              </div>
+            `;
+          }
+        }
+
+        return `
+          <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-5 transition duration-200">
+            <!-- Header Toko -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+              <div class="flex items-center gap-3">
+                <span class="bg-brand-red text-white text-xs font-black px-3 py-1 rounded-lg tracking-wide shadow-sm">
+                  ${escapeHtml(store.kodeToko)}
+                </span>
+                <h3 class="text-base sm:text-lg font-black text-slate-900 leading-snug">
+                  ${escapeHtml(store.namaToko)}
+                </h3>
+              </div>
+
+              <div class="flex flex-wrap items-center gap-3 text-xs text-slate-600 font-semibold">
+                <span class="bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200/60">
+                  AM: <strong class="text-slate-900">${escapeHtml(store.am || '-')}</strong>
+                </span>
+                <span class="bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200/60">
+                  AC: <strong class="text-slate-900">${escapeHtml(store.ac || '-')}</strong>
+                </span>
+                <span class="text-[11px] text-slate-400 font-medium">
+                  <i class="fa-regular fa-clock mr-1"></i>${store.timestamp ? store.timestamp : '-'}
+                </span>
+              </div>
+            </div>
+
+            <!-- Photos Direct Display -->
+            ${photosHtml}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openLightbox(index) {
+      if (index < 0 || index >= activeLightboxPhotos.length) return;
+      activePhotoIndex = index;
+      currentZoom = 1;
+
+      updateLightboxContent();
+      document.getElementById('lightbox').classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function updateLightboxContent() {
+      const item = activeLightboxPhotos[activePhotoIndex];
+      if (!item) return;
+
+      document.getElementById('lightboxCategory').textContent = item.category;
+      document.getElementById('lightboxStoreInfo').textContent = item.storeInfo;
+      document.getElementById('lightboxDriveBtn').href = item.url;
+
+      const img = document.getElementById('lightboxImg');
+      img.src = item.imageUrl;
+      resetZoomLightbox();
+    }
+
+    function closeLightbox() {
+      document.getElementById('lightbox').classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+
+    function navigateLightbox(direction) {
+      let newIndex = activePhotoIndex + direction;
+      if (newIndex < 0) newIndex = activeLightboxPhotos.length - 1;
+      if (newIndex >= activeLightboxPhotos.length) newIndex = 0;
+      openLightbox(newIndex);
+    }
+
+    function zoomLightbox(amount) {
+      currentZoom = Math.max(0.6, Math.min(3, currentZoom + amount));
+      document.getElementById('lightboxImg').style.transform = `scale(${currentZoom})`;
+    }
+
+    function resetZoomLightbox() {
+      currentZoom = 1;
+      document.getElementById('lightboxImg').style.transform = 'scale(1)';
+    }
+
+    document.addEventListener('keydown', function(e) {
+      const lightbox = document.getElementById('lightbox');
+      if (!lightbox.classList.contains('hidden')) {
+        if (e.key === 'Escape') closeLightbox();
+        if (e.key === 'ArrowLeft') navigateLightbox(-1);
+        if (e.key === 'ArrowRight') navigateLightbox(1);
+      }
+    });
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function handleImgError(imgEl) {
+      if (!imgEl) return;
+      imgEl.onerror = null;
+      if (imgEl.parentElement) {
+        imgEl.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-slate-400 text-[10px]">Gagal muat</div>';
+      }
+    }
+  </script>
+</body>
+</html>
